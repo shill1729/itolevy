@@ -353,7 +353,7 @@ class JumpDiffusion(sde):
 
     def __init__(self, x = 0, T = 1, mu = lambda t,x:0, sigma = lambda t,x: 1, lam = 1, alpha = 0, beta = 0.1):
         super().__init__(x = 0, T = T)
-        self.L = self.M/2+1
+        self.L = int(self.M/2+1)
         self.m = self.M+1+2*self.L
         # Constant parameters defining the jump component of the model
         self.jump_pars = (lam, alpha, beta)
@@ -369,7 +369,7 @@ class JumpDiffusion(sde):
         self.eta = np.exp(self.jump_pars[1]+0.5*self.jump_pars[2]**2)-1
 
     # Overridden method from sde
-    def euler_maruyama(self):
+    def _euler_maruyama(self):
         """ Simulate a sample path of a stochastic process via solving an SDE it
         behaves via Euler-Maruyama stochastic integration.
         The initial point of the process, the time-horizion of the simulation, 
@@ -414,7 +414,7 @@ class JumpDiffusion(sde):
         """
         if type(g) != types.FunctionType:
             raise ValueError("Argument 'g' must be a single-variable function")
-        u = np.zeros((self.N+1, self.M))
+        u = np.zeros((self.N+1, self.m))
         h = (self.b-self.a)/self.M
         k = self.T/self.N
         B = self.b+self.L*h
@@ -435,7 +435,7 @@ class JumpDiffusion(sde):
         z = (y-self.jump_pars[1])/self.jump_pars[2]
         f_Y = 2*stats.norm.pdf(z)/self.jump_pars[2]
         f_Y[0] = 0.5*f_Y[0]
-        f_Y[f_Y.shape[0]] = 0.5*f_Y[f_Y.shape[0]]
+        f_Y[f_Y.shape[0]-1] = 0.5*f_Y[f_Y.shape[0]-1]
 
         # Time-stepping integration
         for i in range(0, self.N, 1):
@@ -459,14 +459,16 @@ class JumpDiffusion(sde):
                 beta = -rate(tt, x)-(self.sigma(x)/h)**2-self.jump_pars[0]
                 delta = (self.sigma(x)**2)/(2*(h**2))+(self.mu(x))/(2*h)
             # Checking for time-model or constant model
-            ff = run_cost(tt, x[1:self.M])
+            ff = run_cost(tt, x[(self.L+1):(self.M+self.L)])
             if type(beta) == float:
-                beta = np.repeat(beta, self.M)
+                beta = np.repeat(beta, self.m-1)
             if type(alpha) == float:
-                alpha = np.repeat(alpha, self.M-1)
-                delta = np.repeat(delta, self.M-1)
+                alpha = np.repeat(alpha, self.m-2)
+                delta = np.repeat(delta, self.m-2)
             if type(ff) == float:
                 ff = np.repeat(ff, self.M-1)
+
+
             a = -k*alpha[(1+self.L):(self.M+self.L)]
             b = 1-k*beta[self.L:(self.M+self.L)]
             c = -k*delta[self.L:(self.M+self.L-1)]
@@ -480,9 +482,28 @@ class JumpDiffusion(sde):
             di = u[i, (1+self.L):(self.M+self.L)] + k*(d+ff+self.jump_pars[0]*h*0.5*ju)
             u[i+1, (1+self.L):(self.M+self.L)] = self._tridiag(a, b, c, di)
         if variational:
-                for j in range(0, self.M+1):
+                for j in range(self.L, self.M+self.L):
                     u[i+1, j] = np.max(a = np.array([u[i+1, j], g(x[j])]))
         return u
+
+    def plotPIDE(self, g, rate = lambda t,x:0, run_cost = lambda t,x:0, variational = False):
+        """ Plot the PDE solution surface for a given Feynman-Kac problem. This is defined by a 
+        terminal cost function 'g', a discounting rate, a running_cost, and a boolean for variational inequalitiy problems instead
+        of pure PDEs.
+        """
+        # Computing solution grid to PDE problem
+        u = self.implicit_scheme(g, rate, run_cost, variational)
+        print(u[self.N, int(self.m/2)])
+        # 3D mesh
+        time = self.T-np.linspace(0, self.T, self.N+1)
+        space = np.linspace(self.a, self.b, self.m)
+        # For 3D plotting
+        time, space = np.meshgrid(time, space)
+        fig = plt.figure()
+        # Plotting solution surface
+        ax = fig.add_subplot(111, projection = "3d")
+        ax.plot_surface(time, space, np.transpose(u))
+        plt.show();
 
 
 #=======================================================================================================================================================
