@@ -353,6 +353,8 @@ class JumpDiffusion(sde):
 
     def __init__(self, x = 0, T = 1, mu = lambda t,x:0, sigma = lambda t,x: 1, lam = 1, alpha = 0, beta = 0.1):
         super().__init__(x = 0, T = T)
+        self.L = self.M/2+1
+        self.m = self.M+1+2*self.L
         # Constant parameters defining the jump component of the model
         self.jump_pars = (lam, alpha, beta)
         self.eta = None
@@ -394,6 +396,95 @@ class JumpDiffusion(sde):
             y[i+1] = y[i] + self.mu(i*h, y[i])*h+ self.sigma(i*h, y[i])*np.sqrt(h)*z[i]+logj
         return y
 
+    def implicit_scheme(self, g, rate = lambda t,x:0, run_cost = lambda t,x:0, variational = False):
+        """ Solve parabolic PIDEs with function coefficients 
+        and initial condition using an implicit finite-difference scheme.
+        The argument 'g' is the terminal condition and must be a function of 
+        a single float variable representing the state (x), while the functions 
+        'rate', 'run_cost' must be functions of two variables (t,x), time and state.
+        The functions 'drift' and 'diffuse' are the infinitesimal drift and volatility coefficient
+        functions while the functions 'rate' and 'run_cost' are the discounting function and 
+        running cost function.
+        The argument 'variational' is a boolean that if false will
+        solve the problem PIDE = 0, and if true will solve the variational inequality
+        PIDE <= 0.
+
+        Returned is the solution matrix with rows following time and columns state.
+ 
+        """
+        if type(g) != types.FunctionType:
+            raise ValueError("Argument 'g' must be a single-variable function")
+        u = np.zeros((self.N+1, self.M))
+        h = (self.b-self.a)/self.M
+        k = self.T/self.N
+        B = self.b+self.L*h
+        x = np.linspace(-B, B, num = self.m)
+
+        # IC
+        u[0,:] = g(x)
+        # Boundary conditions for PIDE are extended.
+        for i in range(self.N+1):
+            # Lower half
+            for j in range(self.L+1):
+                u[i, j] = g(x[j])
+            # Upper half
+            for j in range(self.M+self.L, self.m):
+                u[i, j] = g(x[j])
+        # Create jump-pdf-vector
+        y = np.linspace(-self.L*h, self.L*h, 2*self.L+1)
+        z = (y-self.jump_pars[1])/self.jump_pars[2]
+        f_Y = 2*stats.norm.pdf(z)/self.jump_pars[2]
+        f_Y[0] = 0.5*f_Y[0]
+        f_Y[f_Y.shape[0]] = 0.5*f_Y[f_Y.shape[0]]
+
+        # Time-stepping integration
+        for i in range(0, self.N, 1):
+
+            # Populate jump matrix:
+            jump_matrix =  np.zeros((self.M - 1, 2 * self.L + 1))
+            # The jump coefficient matrix is a wrap around of the solution matrix
+            for l in range(self.M-1):
+                for r in range(-self.L, self.L+1):
+                    jump_matrix[l, L + r] = u[i - 1, l + L + 1 + r];
+            ju = jump_matrix@f_Y
+
+            # Setting up coefficients of the linear-system
+            tt = self.T-i*k
+            if self.type == "non-autonomous":
+                alpha = (self.sigma(tt, x)**2)/(2*(h**2))-(self.mu(tt, x))/(2*h)
+                beta = -rate(tt, x)-(self.sigma(tt, x)/h)**2-self.jump_pars[0]
+                delta = (self.sigma(tt, x)**2)/(2*(h**2))+(self.mu(tt, x))/(2*h)
+            elif self.type == "autonomous":
+                alpha = (self.sigma(x)**2)/(2*(h**2))-(self.mu(x))/(2*h)
+                beta = -rate(tt, x)-(self.sigma(x)/h)**2-self.jump_pars[0]
+                delta = (self.sigma(x)**2)/(2*(h**2))+(self.mu(x))/(2*h)
+            # Checking for time-model or constant model
+            ff = run_cost(tt, x[1:self.M])
+            if type(beta) == float:
+                beta = np.repeat(beta, self.M)
+            if type(alpha) == float:
+                alpha = np.repeat(alpha, self.M-1)
+                delta = np.repeat(delta, self.M-1)
+            if type(ff) == float:
+                ff = np.repeat(ff, self.M-1)
+            a = -k*alpha[(1+self.L):(self.M+self.L)]
+            b = 1-k*beta[self.L:(self.M+self.L)]
+            c = -k*delta[self.L:(self.M+self.L-1)]
+
+            # Setting up the target vector
+            d = np.zeros(self.M-1)
+            d[0] = alpha[0]*u[0, self.L]
+            d[self.M-2] = delta[self.M-2]*u[0, self.M+self.L]
+
+            # Non-homogeneous part of the system:
+            di = u[i, (1+self.L):(self.M+self.L)] + k*(d+ff+self.jump_pars[0]*h*0.5*ju)
+            u[i+1, (1+self.L):(self.M+self.L)] = self._tridiag(a, b, c, di)
+        if variational:
+                for j in range(0, self.M+1):
+                    u[i+1, j] = np.max(a = np.array([u[i+1, j], g(x[j])]))
+        return u
+
+
 #=======================================================================================================================================================
 # Now we can define custom classes for specific models with ease
 # They will inherit the simulation methods, and we can go back 
@@ -411,8 +502,8 @@ class Heston(sde):
         self.kappa = kappa
         self.theta = theta
         self.xi = xi
-        mu = lambda x : self.kappa*(self.theta-x)
-        sigma = lambda x : self.xi*np.sqrt(x)
+        mu = lambda x: self.kappa*(self.theta-x)
+        sigma = lambda x: self.xi*np.sqrt(x)
         self.setSDE(mu, sigma)
         self.vp = lambda x: self.xi*0.5/np.sqrt(x)
         self.name = "Heston mean-reversion"
