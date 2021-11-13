@@ -99,6 +99,7 @@ class sde:
                     self._setCoefs(mu, sigma)
             elif drift_args == 1 and vol_args == 1:
                 self.type = "autonomous"
+                self.vp = None
                 self._setCoefs(mu, sigma)
 
    
@@ -162,7 +163,7 @@ class sde:
             y[i+1] = y[i] + self.mu(i*h, y[i])*h+ self.sigma(i*h, y[i])*np.sqrt(h)*z[i]
         return y
 
-    def _milstein(self, vp = None, h = 10**-5):
+    def _milstein(self, h = 10**-5):
         """ Simulate a sample-path of an SDE via the Milstein method.
         This requires the derivative of the volatility function, and that both
         are functions of just a single state variable, i.e. this method is
@@ -171,14 +172,12 @@ class sde:
         if self.type != "autonomous":
             raise ValueError("Cannot use Milstein integration for non-autonomous SDEs.")
         # Check of derivative of sigma(x) is passed otherwise compute it numerically
-        if vp is not None:
+        if self.vp is not None:
             vp_args = len(signature(self.sigma).parameters)
             if vp_args != 1:
                 raise ValueError("The derivative of the volatility function must be a function of a single state-variable if it is passed exactly.")
         else:
-            def vp(x):
-                w = (self.sigma(x+h)-self.sigma(x-h))/(2*h)
-                return w
+            self.vp = lambda x: (self.sigma(x+h)-self.sigma(x-h))/(2*h)
         k = self.T/self.n
         y = np.zeros(self.n+1)
         y[0] = self.x
@@ -186,26 +185,26 @@ class sde:
         for i in range(self.n):
             z = np.random.normal()
             dz = np.sqrt(k)*z
-            y[i+1] = y[i] + self.mu(y[i])*k+self.sigma(y[i])*dz +0.5*self.sigma(y[i])*vp(y[i])*(dz**2-k)
+            y[i+1] = y[i] + self.mu(y[i])*k+self.sigma(y[i])*dz +0.5*self.sigma(y[i])*self.vp(y[i])*(dz**2-k)
         return y
 
     
-    def ol_solve(self, x, T, mu, sigma, n = 1000, vp = None):
+    def ol_solve(self, x, T, mu, sigma, n = 1000):
         
         self.setInitialPoint(x)
         self.setTimeHorizon(T)
         self.setSamplePathRes(n)
         self._setSDE(mu, sigma)
         if self.type == "autonomous":
-            return self._milstein(vp)
+            return self._milstein()
         elif self.type == "non-autonomous":
             return self._euler_maruyama()
         else:
             raise ValueError("Bad SDE type.")
 
-    def solve(self, vp = None):
+    def solve(self):
         if self.type == "autonomous":
-            return self._milstein(vp)
+            return self._milstein()
         elif self.type == "non-autonomous":
             return self._euler_maruyama()
         else:
@@ -415,6 +414,7 @@ class Heston(sde):
         mu = lambda x : self.kappa*(self.theta-x)
         sigma = lambda x : self.xi*np.sqrt(x)
         self.setSDE(mu, sigma)
+        self.vp = lambda x: self.xi*0.5/np.sqrt(x)
         self.name = "Heston mean-reversion"
 
 
@@ -430,6 +430,7 @@ class Gbm(sde):
             raise ValueError("Volatility 'sigma' must be positive.")
         self.pars = (mu, sigma)
         self.setSDE(lambda x: mu*x, lambda x: sigma*x)
+        self.vp = lambda x: sigma
         self.name = "GBM"
 
 
