@@ -1,16 +1,10 @@
 import numpy as np     # installed with matplotlib
 import matplotlib.pyplot as plt
+import scipy.stats as stats
 import types
 
 from mpl_toolkits.mplot3d import axes3d
 from inspect import signature
-from scipy.integrate import quad
-from scipy.optimize import minimize
-from scipy.stats import norm
-import scipy.stats as stats
-# On windows: python -m pip install git+https://github.com/shill1729/itolevy.git
-
-
 
 # Generic base class
 class sde:
@@ -396,7 +390,7 @@ class JumpDiffusion(sde):
             y[i+1] = y[i] + self.mu(i*h, y[i])*h+ self.sigma(i*h, y[i])*np.sqrt(h)*z[i]+logj
         return y
 
-    def implicit_scheme(self, g, rate = lambda t,x:0, run_cost = lambda t,x:0, variational = False):
+    def implicit_scheme(self, g, rate = lambda t,x:0.0, run_cost = lambda t,x:0.0, variational = False):
         """ Solve parabolic PIDEs with function coefficients 
         and initial condition using an implicit finite-difference scheme.
         The argument 'g' is the terminal condition and must be a function of 
@@ -470,7 +464,7 @@ class JumpDiffusion(sde):
             if type(alpha) == float or alpha.size == 1:
                 alpha = np.repeat(alpha, self.m-2)
                 delta = np.repeat(delta, self.m-2)
-            if type(ff) == float or ff.size == 1:
+            if type(ff) == float:
                 ff = np.repeat(ff, self.M-1)
 
 
