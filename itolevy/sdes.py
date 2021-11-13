@@ -80,7 +80,7 @@ class sde:
 
     def setSDE(self, mu, sigma):
         # Check to make sure coefficients are functions
-        if self._checkCoefs():
+        if self._checkCoefs(mu, sigma):
             # Get count of parameters to classify type as (x) autonomous or time-inhomogeneuous (t, x)
             arg_counts = self._getCoefArgNum(mu, sigma)
             drift_args = arg_counts[0]
