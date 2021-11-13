@@ -437,6 +437,14 @@ class JumpDiffusion(sde):
         f_Y[0] = 0.5*f_Y[0]
         f_Y[f_Y.shape[0]-1] = 0.5*f_Y[f_Y.shape[0]-1]
 
+        alpha = None
+        beta = None
+        delta = None
+        if self.type == "autonomous":
+            alpha = (self.sigma(x)**2)/(2*(h**2))-(self.mu(x))/(2*h)
+            beta = -rate(tt, x)-(self.sigma(x)/h)**2-self.jump_pars[0]
+            delta = (self.sigma(x)**2)/(2*(h**2))+(self.mu(x))/(2*h)
+
         # Time-stepping integration
         for i in range(0, self.N, 1):
 
@@ -445,7 +453,7 @@ class JumpDiffusion(sde):
             # The jump coefficient matrix is a wrap around of the solution matrix
             for l in range(self.M-1):
                 for r in range(-self.L, self.L+1):
-                    jump_matrix[l, L + r] = u[i - 1, l + L + 1 + r];
+                    jump_matrix[l, self.L + r] = u[i - 1, l + self.L + 1 + r];
             ju = jump_matrix@f_Y
 
             # Setting up coefficients of the linear-system
@@ -454,10 +462,7 @@ class JumpDiffusion(sde):
                 alpha = (self.sigma(tt, x)**2)/(2*(h**2))-(self.mu(tt, x))/(2*h)
                 beta = -rate(tt, x)-(self.sigma(tt, x)/h)**2-self.jump_pars[0]
                 delta = (self.sigma(tt, x)**2)/(2*(h**2))+(self.mu(tt, x))/(2*h)
-            elif self.type == "autonomous":
-                alpha = (self.sigma(x)**2)/(2*(h**2))-(self.mu(x))/(2*h)
-                beta = -rate(tt, x)-(self.sigma(x)/h)**2-self.jump_pars[0]
-                delta = (self.sigma(x)**2)/(2*(h**2))+(self.mu(x))/(2*h)
+            
             # Checking for time-model or constant model
             ff = run_cost(tt, x[(self.L+1):(self.M+self.L)])
             if type(beta) == float:
