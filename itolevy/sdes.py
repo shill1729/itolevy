@@ -159,7 +159,7 @@ class sde:
         y[0] = self.x     
         z = np.random.normal(size = self.n)
         for i in range(self.n):
-            y[i+1] = y[i] + self.mu(i*h, y[i])*h+ self.volat(i*h, y[i])*np.sqrt(h)*z[i]
+            y[i+1] = y[i] + self.mu(i*h, y[i])*h+ self.sigma(i*h, y[i])*np.sqrt(h)*z[i]
         return y
 
     def _milstein(self, vp = None, h = 10**-5):
