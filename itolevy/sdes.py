@@ -465,12 +465,12 @@ class JumpDiffusion(sde):
             
             # Checking for time-model or constant model
             ff = run_cost(tt, x[(self.L+1):(self.M+self.L)])
-            if type(beta) == float:
+            if type(beta) == float or beta.size == 1:
                 beta = np.repeat(beta, self.m-1)
-            if type(alpha) == float:
+            if type(alpha) == float or alpha.size == 1:
                 alpha = np.repeat(alpha, self.m-2)
                 delta = np.repeat(delta, self.m-2)
-            if type(ff) == float:
+            if type(ff) == float or ff.size == 1:
                 ff = np.repeat(ff, self.M-1)
 
 
