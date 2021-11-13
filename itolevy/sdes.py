@@ -305,17 +305,17 @@ class sde:
         return [x1, x2]
 
     # Plotting functions for sample paths and PDE solutions
-    def plotSamplePath(self, s = None):
+    def plotSamplePath(self, s = None, vp = None):
         """ Simulate or pass a sample path and plot it."""
         if s is None:
-            s = self.euler_maruyama()
+            s = self.solve(vp)
         t = np.linspace(0, self.T, num = self.n+1)
         fig = plt.figure()
         plt.plot(t, s)
         plt.show();
 
     # Plotting functions for sample paths and PDE solutions
-    def plotEnsemble(self, ensemble = None, numpaths = 30):
+    def plotEnsemble(self, ensemble = None, numpaths = 30, vp = None):
         """ Simulate an ensemble of sample paths for the given dynamics of this sde.
         The argument 'numpaths' specifies the number of paths in the ensemble.
         """
@@ -323,7 +323,7 @@ class sde:
         fig = plt.figure()
         if ensemble is None:
             for i in range(numpaths):
-                s = self.euler_maruyama()
+                s = self.solve(vp)
                 plt.plot(t, s)
         else:
             for i in range(ensemble.shape[1]):
