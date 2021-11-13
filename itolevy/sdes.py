@@ -267,7 +267,7 @@ class sde:
                     u[i+1, j] = np.max(a = np.array([u[i+1, j], g(x[j])]))
         return u
 
-    def path_ensemble(self, numpaths = 100, vp = None):
+    def path_ensemble(self, numpaths = 100):
         """ Generate a large ensemble of sample paths for Monte-Carlo integration and for computing path-integrals numerically.
         (Parameters)
         int 'numpaths' the number of paths in the ensemble to generate.
@@ -277,15 +277,15 @@ class sde:
             ensemble[:, i] = self.solve()
         return ensemble
 
-    def monte_carlo(self, g, numpaths = 30, ensemble = None, vp = None):
+    def monte_carlo(self, g, numpaths = 30, ensemble = None):
         """ Compute conditional expectations via Monte-Carlo ensemble averaging.
         Here 'g' is the function to compute in E(g(X_T)|X_t=x)
         """
         if ensemble is None:
-            ensemble = self.path_ensemble(numpaths, vp)
+            ensemble = self.path_ensemble(numpaths)
         return np.mean(g(ensemble[self.n, :]))
 
-    def cond_exp(self, g, numpaths = 30, vp = None):
+    def cond_exp(self, g, numpaths = 30, ensemble = None):
         """ Compute a conditional expectation of a function of a process driven by an SDE.
         """
         if type(g) != types.FunctionType:
@@ -294,8 +294,28 @@ class sde:
             raise ValueError("The argument 'g' must be a function of one variable 'x'.")
         x1 = self.implicit_scheme(g)
         x1 = x1[self.N, int(self.M/2)]
-        x2 = self.monte_carlo(g, numpaths = numpaths, vp = vp)
+        x2 = self.monte_carlo(g, numpaths = numpaths, ensemble = ensemble)
         return [x1, x2]
+
+    def cdf(self, x, t, numpaths = 30, ensemble = None):
+        if ensemble is None:
+            ensemble = self.path_ensemble(numpaths)
+        n = x.shape[0]
+        F_mc = np.zeros(n)
+        F_pde = np.zeros(n)
+        for i in range(n):
+            g = lambda u: self.indicator(u <= x[i])
+            w = self.cond_exp(g, numpaths, ensemble)
+            F_pde[i] = w[0]
+            F_mc[i] = w[1]
+        output = pd.DataFrame([x, F_pde, F_mc]).transpose()
+        output.columns = ["state", "pde", "mc"]
+        fig = plt.figure()
+        plt.plot(output["state"], output["pde"], "black")
+        plt.plot(output["state"], output["mc"], "blue")
+        plt.legend(["pde", "mc"])
+        plt.show();
+        return output
 
     # Plotting functions for sample paths and PDE solutions
     def plotSamplePath(self, s = None, vp = None):
@@ -484,6 +504,21 @@ class JumpDiffusion(sde):
                 for j in range(self.L, self.M+self.L):
                     u[i+1, j] = np.max(a = np.array([u[i+1, j], g(x[j])]))
         return u
+
+    def cond_exp(self, g, numpaths = 30, ensemble = None):
+        """ Compute a conditional expectation of a function of a process driven by an SDE.
+        """
+        if type(g) != types.FunctionType:
+            raise ValueError("The argument 'g' must be a function.")
+        if len(signature(g).parameters) > 1:
+            raise ValueError("The argument 'g' must be a function of one variable 'x'.")
+        x1 = self.implicit_scheme(g)
+        x1 = x1[self.N, int(self.m/2)]
+        x2 = self.monte_carlo(g, numpaths = numpaths, ensemble = ensemble)
+        
+        return [x1, x2]
+
+    
 
     def plotPIDE(self, g, rate = lambda t,x:0, run_cost = lambda t,x:0, variational = False):
         """ Plot the PDE solution surface for a given Feynman-Kac problem. This is defined by a 
