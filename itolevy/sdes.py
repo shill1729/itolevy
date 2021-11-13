@@ -280,7 +280,7 @@ class sde:
         """
         ensemble = np.zeros(shape = (self.n+1, numpaths))
         for i in range(numpaths):
-            ensemble[:, i] = self.solve(vp)
+            ensemble[:, i] = self.solve()
         return ensemble
 
     def monte_carlo(self, g, numpaths = 30, ensemble = None, vp = None):
@@ -307,7 +307,7 @@ class sde:
     def plotSamplePath(self, s = None, vp = None):
         """ Simulate or pass a sample path and plot it."""
         if s is None:
-            s = self.solve(vp)
+            s = self.solve()
         t = np.linspace(0, self.T, num = self.n+1)
         fig = plt.figure()
         plt.plot(t, s)
@@ -322,7 +322,7 @@ class sde:
         fig = plt.figure()
         if ensemble is None:
             for i in range(numpaths):
-                s = self.solve(vp)
+                s = self.solve()
                 plt.plot(t, s)
         else:
             for i in range(ensemble.shape[1]):
