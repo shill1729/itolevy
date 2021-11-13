@@ -41,7 +41,7 @@ class sde:
 
 
     def __str__(self):
-        return "SDE starting at "+str(self.x)+" simulated over [0, "+str(self.T)+"].\n"
+        return self.type+" SDE starting at "+str(self.x)+" simulated over [0, "+str(self.T)+"].\n"
 
     def indicator(self, event):
         """ The indicator function of an event (bool)
