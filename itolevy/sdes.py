@@ -298,7 +298,8 @@ class sde:
         x2 = self.monte_carlo(g, numpaths = numpaths, ensemble = ensemble)
         return [x1, x2]
 
-    def cdf(self, x, t, numpaths = 30, ensemble = None):
+    def cdf(self, x, t = 1/252, numpaths = 30, ensemble = None):
+        self.setTimeHorizon(T = t)
         if ensemble is None:
             ensemble = self.path_ensemble(numpaths)
         n = x.shape[0]
