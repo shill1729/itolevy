@@ -434,7 +434,7 @@ class Gbm(sde):
 
 
     def __str__(self):
-        return super().__str__()+"Geometric brownian motion (mu, sigma) = "+"("+str(self.mu)+", "+str(self.sigma)+")"
+        return super().__str__()+"Geometric brownian motion (mu, sigma) = "+str(self.pars)
    
 
 
