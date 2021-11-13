@@ -84,7 +84,7 @@ class sde:
             # Get count of parameters to classify type as (x) autonomous or time-inhomogeneuous (t, x)
             arg_counts = self._getCoefArgNum(mu, sigma)
             drift_args = arg_counts[0]
-            vol_rgs = arg_counts[1]
+            vol_args = arg_counts[1]
             # If at least one coefficient function depends on time, it is inhomogeneous and we need a wrapper
             # to pass to Euler-Maruyama
             if drift_args == 2 or vol_args == 2:
