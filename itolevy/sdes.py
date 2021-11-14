@@ -315,11 +315,12 @@ class sde:
             F_mc[i] = w[1]
         output = pd.DataFrame([x, F_pde, F_mc]).transpose()
         output.columns = ["state", "pde", "mc"]
-        fig = plt.figure()
-        plt.plot(output["state"], output["pde"], "black")
-        plt.plot(output["state"], output["mc"], "blue")
-        plt.legend(["pde", "mc"])
-        plt.show();
+        if n > 2:
+            fig = plt.figure()
+            plt.plot(output["state"], output["pde"], "black")
+            plt.plot(output["state"], output["mc"], "blue")
+            plt.legend(["pde", "mc"])
+            plt.show();
         return output
 
     # Plotting functions for sample paths and PDE solutions
@@ -596,6 +597,53 @@ class Gbm(sde):
         self.pars = (mu, sigma)
         self.setSDE(lambda x: mu*x, lambda x: sigma*x)
         return epsilon
+
+class MixtureDiff(sde):
+    """Mixture diffusion SDE"""
+
+    def __init__(self, x = 100, T = 1, probs = None, mus = None, sigmas = None):
+        super().__init__(x, T)
+        self.probs = probs
+        self.mus = mus
+        self.sigmas = sigmas
+        drift = lambda t,x: self._mixDrift(t, x)-0.5*self._mixVol(t, x)**2
+        volat = lambda t,x: self._mixVol(t, x)
+        self.setSDE(drift, volat)
+
+    def __str__(self):
+        return super().__str__()+"\n Geometric Brownian mixture:"+"\n probs:"+str(self.probs)+"\n drifts"+str(self.mus)+"\n volatilities"+str(self.sigmas)
+        
+    def _mixDrift1(self, t, x):
+        t = np.max([t, 1/252])
+        z = (x-self.mus-0.5*self.sigmas**2)/(self.sigmas*np.sqrt(t))
+        Lams = probs*stats.norm.pdf(z)/(self.sigmas*np.sqrt(t))
+        Lams = Lams/np.sum(Lams)
+        return np.sum(self.mus*Lams)
+
+    def _mixVol1(self, t, x):
+        t = np.max([t, 1/252])
+        z = (x-(self.mus-0.5*self.sigmas**2)*t)/(self.sigmas*np.sqrt(t))
+        Lams = probs*stats.norm.pdf(z)/(self.sigmas*np.sqrt(t))
+        Lams = Lams/np.sum(Lams)
+        return np.sqrt(np.sum((self.sigmas**2)*Lams))
+
+    def _mixDrift(self, t, x):
+        if x.size == 1:
+            return self._mixDrift1(t, x)
+        else:
+            y = np.zeros(x.size)
+            for i in range(x.size):
+                y[i] = self._mixDrift1(t, x[i])
+            return y
+
+    def _mixVol(self, t, x):
+        if x.size == 1:
+            return self._mixVol1(t, x)
+        else:
+            y = np.zeros(x.size)
+            for i in range(x.size):
+                y[i] = self._mixVol1(t, x[i])
+            return y
 
 class Merton(JumpDiffusion):
 
