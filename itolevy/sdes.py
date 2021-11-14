@@ -294,7 +294,7 @@ class sde:
         if len(signature(g).parameters) > 1:
             raise ValueError("The argument 'g' must be a function of one variable 'x'.")
         x1 = self.implicit_scheme(g)
-        x1 = x1[self.N, int(self.M/2)]
+        x1 = x1[self.N, int((x1.shape[1]-1)/2)]
         x2 = self.monte_carlo(g, numpaths = numpaths, ensemble = ensemble)
         return [x1, x2]
 
@@ -507,18 +507,7 @@ class JumpDiffusion(sde):
                     u[i+1, j] = np.max(a = np.array([u[i+1, j], g(x[j])]))
         return u
 
-    def cond_exp(self, g, numpaths = 30, ensemble = None):
-        """ Compute a conditional expectation of a function of a process driven by an SDE.
-        """
-        if type(g) != types.FunctionType:
-            raise ValueError("The argument 'g' must be a function.")
-        if len(signature(g).parameters) > 1:
-            raise ValueError("The argument 'g' must be a function of one variable 'x'.")
-        x1 = self.implicit_scheme(g)
-        x1 = x1[self.N, int(self.m/2)]
-        x2 = self.monte_carlo(g, numpaths = numpaths, ensemble = ensemble)
-        
-        return [x1, x2]
+    
 
     
 
