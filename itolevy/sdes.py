@@ -204,7 +204,10 @@ class sde:
             return self._euler_maruyama()
         else:
             raise ValueError("Bad SDE type.")
+
     
+
+
     def implicit_scheme(self, g, rate = lambda t,x:0, run_cost = lambda t,x:0, variational = False):
         """ Solve parabolic PDEs with function coefficients 
         and initial condition using an implicit finite-difference scheme.
@@ -320,7 +323,7 @@ class sde:
         return output
 
     # Plotting functions for sample paths and PDE solutions
-    def plotSamplePath(self, s = None, vp = None):
+    def plot_sample_path(self, s = None, vp = None):
         """ Simulate or pass a sample path and plot it."""
         if s is None:
             s = self.solve()
@@ -330,7 +333,7 @@ class sde:
         plt.show();
 
     # Plotting functions for sample paths and PDE solutions
-    def plotEnsemble(self, ensemble = None, numpaths = 30, vp = None):
+    def plot_ensemble(self, ensemble = None, numpaths = 30, vp = None):
         """ Simulate an ensemble of sample paths for the given dynamics of this sde.
         The argument 'numpaths' specifies the number of paths in the ensemble.
         """
@@ -345,7 +348,7 @@ class sde:
                 plt.plot(t, ensemble[:, i])
         plt.show();
 
-    def plotPDE(self, g, rate = lambda t,x:0, run_cost = lambda t,x:0, variational = False):
+    def plot_pde(self, g, rate = lambda t,x:0, run_cost = lambda t,x:0, variational = False):
         """ Plot the PDE solution surface for a given Feynman-Kac problem. This is defined by a 
         terminal cost function 'g', a discounting rate, a running_cost, and a boolean for variational inequalitiy problems instead
         of pure PDEs.
@@ -369,7 +372,7 @@ class JumpDiffusion(sde):
 
     def __init__(self, x = 0, T = 1, mu = lambda t,x:0, sigma = lambda t,x: 1, lam = 1, alpha = 0, beta = 0.1):
         super().__init__(x = 0, T = T)
-        self.L = int(self.M/2+1)
+        self.L = int(self.M/2)+1
         self.m = self.M+1+2*self.L
         # Constant parameters defining the jump component of the model
         self.jump_pars = (lam, alpha, beta)
@@ -511,7 +514,7 @@ class JumpDiffusion(sde):
 
     
 
-    def plotPIDE(self, g, rate = lambda t,x:0, run_cost = lambda t,x:0, variational = False):
+    def plot_pide(self, g, rate = lambda t,x:0, run_cost = lambda t,x:0, variational = False):
         """ Plot the PDE solution surface for a given Feynman-Kac problem. This is defined by a 
         terminal cost function 'g', a discounting rate, a running_cost, and a boolean for variational inequalitiy problems instead
         of pure PDEs.
@@ -600,6 +603,10 @@ class Merton(JumpDiffusion):
         self.pars = (mu, sigma, lam, jump_mean, jump_std)
         super().__init__(x, T, mu = lambda t,x:mu, sigma = lambda t,x:sigma, lam = lam, alpha = jump_mean, beta = jump_std)
 
+    def __str__(self):
+        return super().__str__()+"Merton's jump-diffusion: "+str(self.pars)
+
+
     def pdf(self, x, t):
         """ Probability density function for log-returns in Merton's jump diffusion. This is a infinite weighted
         sum of Gaussian pdfs whose mean and variance depend on the number of jumps n in the Poisson process. The
@@ -635,4 +642,7 @@ class Merton(JumpDiffusion):
                 phi = stats.norm.pdf(x[i], m, v)
                 p[i]=np.sum(pois*phi)
             return p
+
+
+
   
