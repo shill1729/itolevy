@@ -616,14 +616,14 @@ class MixtureDiff(sde):
     def _mixDrift1(self, t, x):
         t = np.max([t, 1/252])
         z = (x-self.mus-0.5*self.sigmas**2)/(self.sigmas*np.sqrt(t))
-        Lams = probs*stats.norm.pdf(z)/(self.sigmas*np.sqrt(t))
+        Lams = self.probs*stats.norm.pdf(z)/(self.sigmas*np.sqrt(t))
         Lams = Lams/np.sum(Lams)
         return np.sum(self.mus*Lams)
 
     def _mixVol1(self, t, x):
         t = np.max([t, 1/252])
         z = (x-(self.mus-0.5*self.sigmas**2)*t)/(self.sigmas*np.sqrt(t))
-        Lams = probs*stats.norm.pdf(z)/(self.sigmas*np.sqrt(t))
+        Lams = self.probs*stats.norm.pdf(z)/(self.sigmas*np.sqrt(t))
         Lams = Lams/np.sum(Lams)
         return np.sqrt(np.sum((self.sigmas**2)*Lams))
 
