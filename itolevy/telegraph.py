@@ -42,9 +42,26 @@ class telegraph:
         return x
 
     def _initial_condition(self, x):
-        return sde.indicator(np.abs(x - self.x0) < self._dx)/self._dx
+        return self.indicator(np.abs(x - self.x0) < self._dx)/self._dx
     def _initial_velocity(self, x):
         return np.zeros(x.size)
+
+    def indicator(self, event):
+        """ The indicator function of an event (bool)
+
+        Returns 1 if event is true and 0 otherwise. The argument 'event' can be an array of bools
+        """
+        if type(event) == np.bool_:
+            if event:
+                return 1
+            else:
+                return 0
+        else:
+            y = np.zeros(event.size)
+            for i in range(event.size):
+                if event[i]:
+                    y[i] = 1 
+            return y
 
     def implicit_scheme(self):
         k1 = 1+1/(self._dt*self.c**2)
