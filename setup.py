@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='itolevy',
-      version='0.2.88',
+      version='0.2.89',
       description='Basic SDE solvers and associated Feynman-Kac solvers.',
       url='https://github.com/shill1729/itolevy',
       author='S. Hill',

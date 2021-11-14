@@ -63,6 +63,7 @@ class telegraph:
             return y
 
     def implicit_scheme(self):
+        # Coefficients defining the tridiagonal linear-system
         k1 = 1+1/(self._dt*self.c**2)
         k2 = -1/(2*self._dt*self.c**2)
         alpha = 1-k2+self._dt/self._dx**2
@@ -71,7 +72,7 @@ class telegraph:
         u = np.zeros((self._N+1, self._M+1))
         # IC
         u[0,:] = self._initial_condition(x)
-        u[1, ] = self._initial_velocity(x)*self.__dt+u[0, ]
+        u[1, ] = self._initial_velocity(x)*self._dt+u[0, ]
         # BC
         u[:, 0] = self._initial_condition(x[0])
         u[:, self._M] = self._initial_condition(x[self._M])
