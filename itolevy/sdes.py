@@ -7,6 +7,7 @@ import pandas as pd
 from mpl_toolkits.mplot3d import axes3d
 from inspect import signature
 
+
 # Generic base class
 class sde:
     
@@ -37,6 +38,7 @@ class sde:
 
     def __str__(self):
         return self.type+" SDE starting at "+str(self.x)+" simulated over [0, "+str(self.T)+"].\n"
+
 
     def indicator(self, event):
         """ The indicator function of an event (bool)
@@ -593,10 +595,11 @@ class Gbm(sde):
         # but the drift won't unless T = 3000 years or something absurd as can be seen by a basic CLT
         # derivation of the confidence bounds for this specific Gaussian model.
         T = X.shape[0]*h
-        epsilon = sigma*norm.ppf(1-alpha/2)/np.sqrt(T)
+        epsilon = sigma*stats.norm.ppf(1-alpha/2)/np.sqrt(T)
         self.pars = (mu, sigma)
         self.setSDE(lambda x: mu*x, lambda x: sigma*x)
-        return epsilon
+        self.drift_std_err = epsilon
+        print("Standard error for the drift = "+str(epsilon))
 
 class MixtureDiff(sde):
     """Mixture diffusion SDE"""
