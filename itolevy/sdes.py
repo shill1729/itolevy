@@ -11,6 +11,7 @@ from inspect import signature
 # Generic base class
 class sde:
     
+
     def __init__(self, x = 0.0, T = 1.0, mu = lambda t,x: 0, sigma = lambda t,x: 1):
         """Initiailize an SDE solver with drift and volatility coefficient functions, initial point, and time-horizion.
         The parameters are 'x' the initial point, 'T', the time horizon to simulate a sample path over. 
@@ -33,8 +34,6 @@ class sde:
         self.a = -1
         self.b = 1
         
-
-
 
     def __str__(self):
         return self.type+" SDE starting at "+str(self.x)+" simulated over [0, "+str(self.T)+"].\n"
@@ -66,14 +65,17 @@ class sde:
         else:
             return True
 
+
     def _getCoefArgNum(self, mu, sigma):
         drift_args = len(signature(mu).parameters)
         vol_args = len(signature(sigma).parameters)
         return (drift_args, vol_args)
     
+
     def _setCoefs(self, mu, sigma):
         self.mu = mu
         self.sigma = sigma
+
 
     def setSDE(self, mu, sigma):
         # Check to make sure coefficients are functions
@@ -104,19 +106,24 @@ class sde:
     def setInitialPoint(self, x):
         self.x = x
 
+
     def setTimeHorizon(self, T):
         self.T = T
 
+
     def setSamplePathRes(self, n):
         self.n = n
+
 
     def setGridRes(self, N, M):
         self.N = N
         self.M = M
 
+
     def setRegion(self, a, b):
         self.a = a
         self.b = b
+
 
     def _tridiag(self, a, b, c, d):
         """ Tridiagonal linear system solver using back-substitution, via the
@@ -142,6 +149,7 @@ class sde:
             x[i]=dd[i]-cc[i]*x[i+1]
         return x
 
+
     # For passing user-defined drift and diffusion functions
     def _euler_maruyama(self):
         """ Simulate a sample path of a stochastic process via solving an SDE it
@@ -159,6 +167,7 @@ class sde:
         for i in range(self.n):
             y[i+1] = y[i] + self.mu(i*h, y[i])*h+ self.sigma(i*h, y[i])*np.sqrt(h)*z[i]
         return y
+
 
     def _milstein(self, h = 10**-5):
         """ Simulate a sample-path of an SDE via the Milstein method.
@@ -199,6 +208,7 @@ class sde:
         else:
             raise ValueError("Bad SDE type.")
 
+
     def solve(self):
         if self.type == "autonomous":
             return self._milstein()
@@ -208,8 +218,6 @@ class sde:
             raise ValueError("Bad SDE type.")
 
     
-
-
     def implicit_scheme(self, g, rate = lambda t,x:0, run_cost = lambda t,x:0, variational = False):
         """ Solve parabolic PDEs with function coefficients 
         and initial condition using an implicit finite-difference scheme.
@@ -273,6 +281,7 @@ class sde:
                         u[i+1, j] = np.max(a = np.array([u[i+1, j], g(x[j])]))
         return u
 
+
     def path_ensemble(self, numpaths = 100):
         """ Generate a large ensemble of sample paths for Monte-Carlo integration and for computing path-integrals numerically.
         (Parameters)
@@ -283,6 +292,7 @@ class sde:
             ensemble[:, i] = self.solve()
         return ensemble
 
+
     def monte_carlo(self, g, numpaths = 30, ensemble = None):
         """ Compute conditional expectations via Monte-Carlo ensemble averaging.
         Here 'g' is the function to compute in E(g(X_T)|X_t=x)
@@ -290,6 +300,7 @@ class sde:
         if ensemble is None:
             ensemble = self.path_ensemble(numpaths)
         return np.mean(g(ensemble[self.n, :]))
+
 
     def cond_exp(self, g, numpaths = 30, ensemble = None):
         """ Compute a conditional expectation of a function of a process driven by an SDE.
@@ -302,6 +313,7 @@ class sde:
         x1 = x1[self.N, int((x1.shape[1]-1)/2)]
         x2 = self.monte_carlo(g, numpaths = numpaths, ensemble = ensemble)
         return [x1, x2]
+
 
     def cdf(self, x, t = 1/252, numpaths = 30, ensemble = None):
         self.setTimeHorizon(T = t)
@@ -325,6 +337,7 @@ class sde:
             plt.show();
         return output
 
+
     # Plotting functions for sample paths and PDE solutions
     def plot_sample_path(self, s = None, vp = None):
         """ Simulate or pass a sample path and plot it."""
@@ -334,6 +347,7 @@ class sde:
         fig = plt.figure()
         plt.plot(t, s)
         plt.show();
+
 
     # Plotting functions for sample paths and PDE solutions
     def plot_ensemble(self, ensemble = None, numpaths = 30, vp = None):
@@ -350,6 +364,7 @@ class sde:
             for i in range(ensemble.shape[1]):
                 plt.plot(t, ensemble[:, i])
         plt.show();
+
 
     def plot_pde(self, g, rate = lambda t,x:0, run_cost = lambda t,x:0, variational = False):
         """ Plot the PDE solution surface for a given Feynman-Kac problem. This is defined by a 
@@ -373,7 +388,10 @@ class sde:
 
 class JumpDiffusion(sde):
 
+
     def __init__(self, x = 0, T = 1, mu = lambda t,x:0, sigma = lambda t,x: 1, lam = 1, alpha = 0, beta = 0.1):
+        """ Merton's jump-diffusion model with arbitrary drift and volatility coefficient functions.
+        """
         super().__init__(x = 0, T = T)
         self.L = int(self.M/2)+1
         self.m = self.M+1+2*self.L
@@ -389,6 +407,7 @@ class JumpDiffusion(sde):
 
     def _meanJumpSize(self):
         self.eta = np.exp(self.jump_pars[1]+0.5*self.jump_pars[2]**2)-1
+
 
     # Overridden method from sde
     def _euler_maruyama(self):
@@ -417,6 +436,7 @@ class JumpDiffusion(sde):
                 logj = np.random.normal(alpha, beta)
             y[i+1] = y[i] + self.mu(i*h, y[i])*h+ self.sigma(i*h, y[i])*np.sqrt(h)*z[i]+logj
         return y
+
 
     def implicit_scheme(self, g, rate = lambda t,x:0.0, run_cost = lambda t,x:0.0, variational = False):
         """ Solve parabolic PIDEs with function coefficients 
@@ -508,14 +528,11 @@ class JumpDiffusion(sde):
             # Non-homogeneous part of the system:
             di = u[i, (1+self.L):(self.M+self.L)] + k*(d+ff+self.jump_pars[0]*h*0.5*ju)
             u[i+1, (1+self.L):(self.M+self.L)] = self._tridiag(a, b, c, di)
-        if variational:
-                for j in range(self.L, self.M+self.L):
-                    u[i+1, j] = np.max(a = np.array([u[i+1, j], g(x[j])]))
+            if variational:
+                    for j in range(self.L, self.M+self.L):
+                        u[i+1, j] = np.max(a = np.array([u[i+1, j], g(x[j])]))
         return u
 
-    
-
-    
 
     def plot_pide(self, g, rate = lambda t,x:0, run_cost = lambda t,x:0, variational = False):
         """ Plot the PDE solution surface for a given Feynman-Kac problem. This is defined by a 
@@ -545,6 +562,8 @@ class JumpDiffusion(sde):
 
 # Heston Mean-Reverting model (OU process)
 class Heston(sde):
+
+
     def __init__(self, x, T, kappa, theta, xi):
         """ Heston mean-reversion: kappa = reversion speed, theta = rev. level, xi = vol of vol
         """
@@ -564,7 +583,10 @@ class Heston(sde):
     def __str__(self):
         return super().__str__()+"Heston mean-reverting volatility (kappa, theta, xi) = "+"("+str(self.kappa)+", "+str(self.theta)+", "+str(self.xi)+")"
 
+
 class Gbm(sde):
+
+
     def __init__(self, x, T, mu = 0, sigma = 1):
         """ Geometric Brownian motion.
         """
@@ -604,6 +626,7 @@ class Gbm(sde):
 class MixtureDiff(sde):
     """Mixture diffusion SDE"""
 
+
     def __init__(self, x = 100, T = 1, probs = None, mus = None, sigmas = None):
         super().__init__(x, T)
         self.probs = probs
@@ -613,9 +636,11 @@ class MixtureDiff(sde):
         volat = lambda t,x: self._mixVol(t, x)
         self.setSDE(drift, volat)
 
+
     def __str__(self):
         return super().__str__()+"\n Geometric Brownian mixture:"+"\n probs:"+str(self.probs)+"\n drifts"+str(self.mus)+"\n volatilities"+str(self.sigmas)
-        
+       
+    
     def _mixDrift1(self, t, x):
         t = np.max([t, 1/252])
         z = (x-self.mus-0.5*self.sigmas**2)/(self.sigmas*np.sqrt(t))
@@ -623,12 +648,14 @@ class MixtureDiff(sde):
         Lams = Lams/np.sum(Lams)
         return np.sum(self.mus*Lams)
 
+
     def _mixVol1(self, t, x):
         t = np.max([t, 1/252])
         z = (x-(self.mus-0.5*self.sigmas**2)*t)/(self.sigmas*np.sqrt(t))
         Lams = self.probs*stats.norm.pdf(z)/(self.sigmas*np.sqrt(t))
         Lams = Lams/np.sum(Lams)
         return np.sqrt(np.sum((self.sigmas**2)*Lams))
+
 
     def _mixDrift(self, t, x):
         if x.size == 1:
@@ -638,6 +665,7 @@ class MixtureDiff(sde):
             for i in range(x.size):
                 y[i] = self._mixDrift1(t, x[i])
             return y
+
 
     def _mixVol(self, t, x):
         if x.size == 1:
@@ -653,6 +681,7 @@ class Merton(JumpDiffusion):
     def __init__(self, x, T, mu = 0.1, sigma = 0.5, lam = 10, jump_mean = 0, jump_std = 0.4):
         self.pars = (mu, sigma, lam, jump_mean, jump_std)
         super().__init__(x, T, mu = lambda t,x:mu, sigma = lambda t,x:sigma, lam = lam, alpha = jump_mean, beta = jump_std)
+
 
     def __str__(self):
         return super().__str__()+"Merton's jump-diffusion: "+str(self.pars)
@@ -695,5 +724,137 @@ class Merton(JumpDiffusion):
             return p
 
 
+    def cdf(self, x, t, lb = -10.0**5, M = 500):
+        """ Cumulative distribution function of log-returns in Merton's jump diffusion. This is computed
+        numerically using the composite trapezoid scheme and the semi-analytic Merton PDF.
 
-  
+        (Parameters)
+        'x' the log-return level
+        't' the time to compute the density at
+        
+        (Returns)
+        Either a float or np.ndarray 
+        """
+        dx = (x-lb)/M
+        if type(x) == float:
+            x_grid = np.linspace(lb, x, num = M+1)
+            f = 2*self.pdf(x_grid, t)
+            f[0] = f[0]/2
+            f[M]  = f[M]/2
+            return np.sum(f)*dx/2
+        elif type(x) is np.ndarray:
+            y = np.zeros(x.size)
+            for i in range(x.size):
+                x_grid = np.linspace(lb, x[i], num = M+1)
+                f = 2*self.pdf(x_grid, t)
+                f[0] = f[0]/2
+                f[M]  = f[M]/2
+                y[i] = np.sum(f)*dx/2
+            return y
+
+
+    def _ppf_root(self, x, t, alpha = 0.5):
+        return self.cdf(x, t)-alpha
+
+
+    def ppf(self, alpha, t, a = -1, b = 1):
+        return brentq(self._ppf_root, a, b, args = (t, alpha))
+
+
+    def VaR(self, t, alpha = 0.01, a = -2, b = 2):
+        """ A slightly non-standard implementation of Value-At-Risk. Instead of computing the inverse of
+        1-F(-x) we compute the inverse of 1-F(x). This way when applied to returns distributions we obtain the
+        loss level that is the worst case scenario with chance 1-alpha."""
+        f = lambda x, t, alpha: 1-self.cdf(x,t)-(1-alpha)
+        return brentq(f, a, b, args = (t, alpha))
+
+
+    def logLikelihood(self, theta, X, t):
+        self.mu = theta[0]
+        self.sigma = theta[1]
+        self.lam = theta[2]
+        self.jm = 0
+        self.jv = theta[3]
+        self._meanJumpSize()
+        f = self.pdf(X, t)
+        return -np.sum(np.log(f[f>0]))
+
+
+    def stats(self, t = 1/252):
+        mean = (self.mu-0.5*self.sigma**2-self.lam*self.eta)*t+self.lam*t*self.jm
+        std = np.sqrt(t*self.sigma**2+self.lam*t*(self.jm**2+self.jv**2))
+        return (mean, std)
+
+
+    def fit(self, X, t = 1/252, numDev = 1):
+        """ Fit a symmetric Merton distribution to daily log-returns. This simply uses
+        scipy.optimize.minimize's method = "L-BFGS-B" with bounds.
+        """
+
+        # Initial guess defining jumps as a certain number of std's from 0, in an ad-hoc manner.
+        sigma = np.std(X[np.abs(X) < numDev*np.std(X)])/np.sqrt(t)
+        mu = np.mean(X[np.abs(X) < numDev*np.std(X)])/t+0.5*sigma**2
+        jm = 0
+        jv = np.std(X[np.abs(X) >= numDev*np.std(X)])
+        lam = (np.sum(np.abs(X>=numDev*np.std(X)))/X.size)/t
+     
+        x0 = np.array([mu, sigma, lam, jv])
+        bnds = ((-np.infty, np.infty), (0.001, np.infty), (0.001, np.infty), (0.001, np.infty))
+        w = minimize(self.logLikelihood, x0, args = (X, t), method = "L-BFGS-B", bounds = bnds)
+        if w.success:
+            print(w)
+            # Convert to (mu, sigma, lam, 0, jv)
+            self.mu = w.x[0]
+            self.sigma = w.x[1]
+            self.lam = w.x[2]
+            self.jm = 0
+            self.jv = w.x[3]
+            self.__setMeanJumpSize()
+        else:
+            print(w)
+        return None
+
+
+    def _jint(self, a, g):
+        """ The integral term induced by the sde with jumps for the optimal log-portfolio under
+        Merton's jump diffusion.
+        """
+        # Truncate interval
+        lb = norm.isf(0.99, self.jm, self.jv)
+        ub = norm.ppf(0.99, self.jm, self.jv)
+        # Function for Python's/scipy's base integrate function
+        integrand = lambda y, aa: g(np.exp(y)-1, aa)*norm.pdf(y, self.jm, self.jv)
+        d = integrate.quad(integrand, lb, ub, args = (a))[0]
+        return d
+    
+
+    def kelly_criterion(self, rate = 0, iterations = 100, tol = 10**-6):
+        """ Compute the so called Kelly-criterion under Merton's jump diffusion model.
+        A Newton-Raphson scheme is used.
+
+        Returns a DataFrame of the optimal control, growth-rate, root-value, number of iterations needed and
+        a convergence message based on the supplied tolerance.
+        """
+        g1 = lambda x,a: (a*x**2)/(1+a*x)
+        g = lambda x,a: (x/(1+a*x))**2
+        a = np.zeros(iterations+1)
+        a[0] = (self.mu-rate)/self.sigma**2
+        i = 0
+        rootCheck = 2*tol
+        while abs(rootCheck) > tol and i <= iterations:
+            Li = self.mu-rate-a[i]*self.sigma**2-self.lam*self._jint(a[i], g1)
+            Lip = -self.sigma-self.lam*self._jint(a[i], g)
+            a[i+1] = a[i]-Li/Lip
+            i += 1
+            rootCheck = self.mu-rate-a[i]*self.sigma**2-self.lam*self._jint(a[i], g1)
+        msg = ""
+        if abs(rootCheck) < tol:
+            msg = "converged"
+        else:
+            msg = "reached max number of iterations and not within tolerance yet"
+        growth_integrand = lambda x,aa: np.log(1+aa*x)-aa*x
+        optimal_control = a[i]
+        growth = rate+(self.mu-rate)*optimal_control-0.5*(self.sigma*optimal_control)**2+self.lam*self._jint(optimal_control, growth_integrand)
+        output = pd.DataFrame([optimal_control, growth, rootCheck, i, msg])
+        output.index = ["control", "growth", "root_check", "iterations", "message"]
+        return output
