@@ -3,10 +3,15 @@ import matplotlib.pyplot as plt
 import scipy.stats as stats
 import types
 import pandas as pd
+import scipy.integrate as integrate
 
 from mpl_toolkits.mplot3d import axes3d
 from inspect import signature
 
+from scipy.stats import poisson
+from scipy.stats import norm
+from scipy.optimize import minimize
+from scipy.optimize import brentq
 
 # Generic base class
 class sde:
