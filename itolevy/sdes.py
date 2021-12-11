@@ -268,9 +268,9 @@ class sde:
             d[self.M-2] = delta[self.M-2]*u[0, self.M]
             di = u[i, 1:self.M] + k*(d+ff)
             u[i+1, 1:self.M] = self._tridiag(a, b, c, di)
-        if variational:
-                for j in range(0, self.M+1):
-                    u[i+1, j] = np.max(a = np.array([u[i+1, j], g(x[j])]))
+            if variational:
+                    for j in range(0, self.M+1):
+                        u[i+1, j] = np.max(a = np.array([u[i+1, j], g(x[j])]))
         return u
 
     def path_ensemble(self, numpaths = 100):
