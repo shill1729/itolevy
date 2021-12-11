@@ -814,7 +814,7 @@ class Merton(JumpDiffusion):
             self.lam = w.x[2]
             self.jm = 0
             self.jv = w.x[3]
-            self.__setMeanJumpSize()
+            self._meanJumpSize()
         else:
             print(w)
         return None
